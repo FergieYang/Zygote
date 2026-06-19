@@ -1,0 +1,7 @@
+node_modules/
+dist/
+out/
+.zygote/
+*.vsix
+.DS_Store
+.debug/

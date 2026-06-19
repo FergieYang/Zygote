@@ -1,0 +1,68 @@
+{
+  "name": "zygote",
+  "displayName": "Zygote",
+  "description": "A tree-based working surface for AI coding agents.",
+  "version": "0.1.0",
+  "publisher": "zygoteai",
+  "engines": {
+    "vscode": "^1.100.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:zygote.open"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "zygote.open",
+        "title": "Open Zygote"
+      },
+      {
+        "command": "zygote.captureSnapshot",
+        "title": "Zygote: Capture Debug Snapshot"
+      },
+      {
+        "command": "zygote.dumpTree",
+        "title": "Zygote: Dump Tree Context"
+      }
+    ],
+    "configuration": {
+      "title": "Zygote",
+      "properties": {
+        "zygote.backend": {
+          "type": "string",
+          "enum": ["auto", "sdk", "cli"],
+          "default": "auto",
+          "description": "Which backend to use. 'sdk' = Anthropic API key (for shipping). 'cli' = Claude Code CLI (free for dev). 'auto' = SDK if API key exists, otherwise CLI."
+        },
+        "zygote.cliPath": {
+          "type": "string",
+          "default": "claude",
+          "description": "Path to the Claude Code CLI executable. Set this if 'claude' is not on your PATH (e.g. '/usr/local/bin/claude')."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "build:webview": "cd webview-ui && npx vite build",
+    "build": "npm run compile && npm run build:webview",
+    "package": "vsce package"
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "^0.3.148",
+    "@anthropic-ai/sdk": "^0.98.0",
+    "uuid": "^11.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "@types/uuid": "^10.0.0",
+    "@types/vscode": "^1.100.0",
+    "@vscode/vsce": "^3.3.0",
+    "typescript": "^5.8.0"
+  }
+}

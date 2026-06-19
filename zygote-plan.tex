@@ -1,0 +1,471 @@
+\documentclass[11pt,letterpaper]{article}
+
+% --- Encoding & language ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[english]{babel}
+
+% --- Page geometry ---
+\usepackage[margin=1in,top=1in,bottom=1in]{geometry}
+
+% --- Typography ---
+\usepackage[expansion=false]{microtype}
+\usepackage{setspace}
+\setstretch{1.15}
+
+% --- Lists, tables, colors ---
+\usepackage{enumitem}
+\setlist{itemsep=0.3em,topsep=0.4em}
+\usepackage{xcolor}
+\definecolor{accent}{HTML}{1A4D8F}
+\definecolor{soft}{HTML}{555555}
+\definecolor{rulecol}{HTML}{CCCCCC}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
+
+% --- Section styling ---
+\usepackage{titlesec}
+\titleformat{\section}
+  {\Large\bfseries\color{accent}}{\thesection}{0.8em}{}
+\titleformat{\subsection}
+  {\large\bfseries}{\thesubsection}{0.6em}{}
+\titleformat{\subsubsection}
+  {\normalsize\bfseries\itshape}{\thesubsubsection}{0.5em}{}
+\titlespacing*{\section}{0pt}{1.6em}{0.6em}
+\titlespacing*{\subsection}{0pt}{1.2em}{0.4em}
+
+% --- Header / footer ---
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
+\fancyfoot[L]{\footnotesize\color{soft}Zygote v0.1 — Execution Plan}
+\fancyfoot[R]{\footnotesize\color{soft}\thepage}
+
+% --- Hyperlinks ---
+\usepackage[hidelinks,bookmarks=true]{hyperref}
+\hypersetup{
+  pdftitle={Zygote v0.1 Execution Plan},
+  pdfauthor={Fergie},
+  pdfsubject={Six-week development plan for Zygote v0.1},
+  pdfkeywords={zygote, vscode extension, ai agent, mvp}
+}
+
+% --- Custom box for emphasis ---
+\usepackage{tcolorbox}
+\tcbuselibrary{breakable,skins}
+\newtcolorbox{notebox}[1][]{
+  enhanced,
+  colback=accent!4,
+  colframe=accent!40,
+  boxrule=0.4pt,
+  arc=2pt,
+  left=10pt,right=10pt,top=8pt,bottom=8pt,
+  breakable,
+  #1
+}
+\newtcolorbox{warnbox}[1][]{
+  enhanced,
+  colback=orange!5,
+  colframe=orange!50,
+  boxrule=0.4pt,
+  arc=2pt,
+  left=10pt,right=10pt,top=8pt,bottom=8pt,
+  breakable,
+  #1
+}
+
+% --- Title ---
+\title{
+  \vspace{-0.5in}
+  {\Huge\bfseries Zygote v0.1}\\[0.3em]
+  {\Large\color{soft} Six-Week Execution Plan}\\[1em]
+  {\normalsize\color{soft}\itshape From specification to LinkedIn launch}
+}
+\author{}
+\date{
+  \normalsize Draft: \today\\
+  \footnotesize Target launch: 2026-06-26
+}
+
+\begin{document}
+\maketitle
+\thispagestyle{fancy}
+
+\vspace{-3em}
+\begin{center}
+\rule{0.5\textwidth}{0.4pt}
+\end{center}
+
+%==============================================
+\section{Overview}
+
+This document defines a six-week execution plan for shipping the first publicly demonstrable version of Zygote, beginning with specification review and ending with a LinkedIn announcement supported by a working demonstration. The plan assumes five hours of focused work per day, six days per week, throughout the summer of 2026, executed in parallel with paper-writing and internship recruiting at reduced intensity.
+
+The plan is organized into three phases. Phase~0 (one day) is a complete review and revision of the existing specification document, performed by the author alone before any code is written. Phase~1 (two days) is a focused technical onboarding designed to remove the largest predictable sources of friction before development begins. Phase~2 (six weeks) is the development sprint itself, structured around weekly deliverables that build toward a single concrete launch artifact: a short screencast of the core fork-and-restore interaction.
+
+\begin{notebox}
+\textbf{Launch criterion.} Phase~2 is complete when the author can record a 30--60 second GIF demonstrating: (1)~creation of a node, (2)~commit and execution against a real file, (3)~fork of the resulting node into a new branch, (4)~automatic restoration of workspace files to the pre-fork state, and (5)~independent evolution of the new branch. No other feature is required for the LinkedIn launch.
+\end{notebox}
+
+%==============================================
+\section{Phase 0: Specification Review}
+\label{sec:phase0}
+
+\subsection*{Objective}
+Take complete ownership of the specification by reading it end-to-end, identifying every section where occupying decisions were made by Claude on the author's behalf, and replacing them with the author's own judgment.
+
+\subsection*{Duration} One session, 2--2.5 hours, completed in a single sitting.
+
+\subsection*{Method: Four-Pass Review}
+
+The specification should be reviewed in four sequential passes, not interactively edited section by section. Interactive editing dilutes ownership; the author must form a complete impression before changing anything.
+
+\begin{enumerate}
+  \item \textbf{Pure reading} (30 min). Read the entire specification without modification. Close the document. Attempt to explain Zygote to an imagined stranger from memory. If unable, read again.
+
+  \item \textbf{Annotation only} (30 min). Reopen the document. Mark every passage requiring revision using inline comments. Do not yet write replacement text. This pass converts feeling into concrete action items.
+
+  \item \textbf{Revision} (45 min). Process all annotations. Write replacement text. Resolve all open marks.
+
+  \item \textbf{AI-assisted audit} (15 min). Submit the revised specification to a coding assistant with the following request: \textit{(a)~consistency check between the scope section and the demo scenario, (b)~terminology audit confirming consistent usage of core terms, (c)~identification of undeclared library or API dependencies in the technical architecture, (d)~marking (not deletion) of redundant or compressible passages.} This is the only AI involvement permitted during Phase 0.
+\end{enumerate}
+
+\subsection*{Mandatory Revision Targets}
+
+The following sections contain placeholder decisions and must be rewritten by the author:
+
+\begin{itemize}
+  \item \textbf{§1 What is Zygote (opening paragraph).} The current draft is technically correct but tonally neutral. Rewrite using the author's own voice. The two-sentence summary developed during this rewrite will be reused for the LinkedIn post, the GitHub repository description, and the blog header.
+
+  \item \textbf{§3 ordering of subsections.} The current order is node $\to$ branch $\to$ chat $\to$ file state. Reconsider which of these is the most defensible differentiator. The first subsection in §3 becomes the product's primary value claim by default.
+
+  \item \textbf{§5.1 naming of the three interaction modes.} Current names: New Task, Node Chat, Floating Chat. Evaluate whether ``Node Chat'' remains the right term given that it explicitly demotes chat from a primary interface. Alternatives to consider include Node Exploration, Pre-commit Discussion, or other formulations.
+
+  \item \textbf{§6.3 success criteria.} Four criteria are listed. For each, decide whether it reflects the author's actual definition of success or whether it was inserted as a generic placeholder. Replace any that do not.
+
+  \item \textbf{§9 roadmap.} Versions v0.2 through v0.5 are speculative. Rewrite to reflect the author's actual intended evolution. If uncertain, delete v0.2--v0.5 entirely and leave only v0.1. An empty roadmap is more honest than a fabricated one.
+
+  \item \textbf{§11 demo scenario.} The current scenario (JWT refactor, middleware versus decorator) was constructed for illustration. Replace with a real coding situation the author has experienced in the past two weeks. Authentic scenarios are substantially more persuasive than fabricated ones.
+\end{itemize}
+
+\subsection*{Sections to Read Without Necessarily Revising}
+
+The following sections do not require rewriting but must be understood well enough to recite without reference during development:
+
+\begin{itemize}
+  \item §4 Information Architecture (four-level hierarchy)
+  \item §5.2 Node Lifecycle (uncommitted $\to$ running $\to$ committed)
+  \item §5.3 Fork Semantics, with particular attention to the choice not to copy a node's internal chat into the forked branch
+  \item §7.2 Data Model (TypeScript types serve as the operational schema)
+  \item §7.5 Webview–Extension Host Protocol (the message contract)
+\end{itemize}
+
+\subsection*{Sections That May Be Deferred to Implementation}
+
+§2 (Problem), §7.1 (System Overview), §7.3 (Persistence Layout), §7.4 (Agent Runtime), §7.6 (File System Interaction), §7.7 (Project Structure), §8 (Competitive Differentiation), and §10 (Open Questions). These describe technical conventions and can be consulted as needed during development.
+
+\begin{warnbox}
+\textbf{Anti-pattern: Specification perfectionism.} The objective of Phase~0 is to make the specification good enough to begin coding, not to make it perfect. If the review extends past three hours, stop. Begin Phase~1. The specification will continue to evolve during implementation and the document at the end of v0.1 will look meaningfully different from the document at the start. This is expected.
+\end{warnbox}
+
+%==============================================
+\section{Phase 1: Technical Onboarding}
+\label{sec:phase1}
+
+\subsection*{Objective}
+Eliminate the largest predictable sources of friction before the development sprint begins. Two days of focused onboarding is expected to save fifteen to twenty hours of unproductive debugging during weeks~1 and~2 of Phase~2.
+
+\subsection*{Duration} Two days, five hours per day, ten hours total.
+
+\subsection*{Rationale}
+``Learn while building'' is sound advice for technologies with abundant documentation, immediate error feedback, and well-understood failure modes: TypeScript syntax, React component patterns, Claude API calls, file I/O. These can be addressed in real time without disrupting development.
+
+It is unsound advice for technologies with non-obvious mental models and silent failure modes: the VS Code Extension API, the webview content security policy, and the message-passing protocol between the extension host and the webview. A debugging session in an unfamiliar webview frequently produces no error message; the user is left with a blank panel and no indication of what is wrong. Without prior conceptual understanding, this consumes entire evenings.
+
+The onboarding phase exists to convert the second category into the first.
+
+\subsection*{Day 1: Foundations}
+
+\begin{tabularx}{\textwidth}{@{}lX@{}}
+\toprule
+\textbf{Time} & \textbf{Activity} \\
+\midrule
+0:00--1:30 & Complete the official ``Your First Extension'' tutorial from the VS Code documentation. Build the resulting extension. Verify activation, command registration, and the debug launch configuration. \\
+\addlinespace
+1:30--2:30 & Locate a VS Code + webview + React template on GitHub with reasonable activity and clone it. Verify that the template builds and that the webview renders in a development host instance. \\
+\addlinespace
+2:30--3:30 & Modify the template to add a single button in the webview. Wire the button to send a message to the extension host. Have the extension host log the message to its output channel. Confirm the round-trip works. \\
+\addlinespace
+3:30--4:30 & Add a Claude API call to the extension host. Have it triggered by the webview button. Display the response in the webview. Use a hard-coded prompt. Confirm streaming or non-streaming response handling, whichever is simpler. \\
+\addlinespace
+4:30--5:00 & Configure the development environment: \texttt{launch.json} for debugging, \texttt{tasks.json} for build, environment variable handling for the API key. \\
+\bottomrule
+\end{tabularx}
+
+\subsection*{Day 2: Concept Solidification}
+
+\begin{tabularx}{\textwidth}{@{}lX@{}}
+\toprule
+\textbf{Time} & \textbf{Activity} \\
+\midrule
+0:00--1:00 & Read the VS Code webview API documentation, focusing on the content security policy section and the message-passing API. \\
+\addlinespace
+1:00--2:30 & Read the VS Code workspace API documentation, focusing on \texttt{workspace.fs} for file system operations and \texttt{workspace.applyEdit} for editor modifications. \\
+\addlinespace
+2:30--4:00 & Modify the template to read a file from the workspace, display its contents in the webview, allow modification through a textarea, and write the modified contents back. Confirm that the editor pane reflects the change. \\
+\addlinespace
+4:00--5:00 & Sketch the directory structure for Zygote (as in spec §7.7). Create the empty folders. Move template code into the new structure. Commit to a fresh git repository. \\
+\bottomrule
+\end{tabularx}
+
+\subsection*{Exit Criteria for Phase 1}
+
+Phase 1 is complete when all of the following are demonstrably working in a fresh extension host instance launched via F5:
+
+\begin{enumerate}
+  \item A webview renders inside VS Code.
+  \item A button in the webview triggers an extension host action.
+  \item The extension host calls the Claude API and returns a response to the webview.
+  \item The extension host reads and writes files in the user's workspace.
+  \item A git repository exists with the directory structure ready for Zygote development.
+\end{enumerate}
+
+%==============================================
+\section{Phase 2: Six-Week Development Sprint}
+\label{sec:phase2}
+
+\subsection*{Structure}
+
+The sprint is organized into six weeks, each with a single demonstrable deliverable. The deliverable defines whether the week is complete; partial progress without a demonstrable artifact counts as incomplete. This structure exists to convert the open-ended task of ``build Zygote'' into a sequence of concrete, falsifiable claims.
+
+\subsection*{Week 1: Tree Persistence}
+
+\textbf{Deliverable.} A working extension that allows the user to type a prompt, sends the prompt to the Claude API, displays the response, and persists the prompt-response pair as a node in a tree stored at \texttt{.zygote/tree.json}. Closing and reopening VS Code restores the tree.
+
+\textbf{Scope.} Data model implementation (TypeScript types from spec §7.2). Persistence layer (read and write \texttt{tree.json}). Basic webview UI displaying the tree as an indented list. Single-node creation. No internal chat, no commit/uncommit states, no fork, no tool use.
+
+\textbf{Out of scope this week.} Every other feature.
+
+\subsection*{Week 2: Node Lifecycle}
+
+\textbf{Deliverable.} Nodes have three states (uncommitted, running, committed). The user can create an uncommitted node, edit its prompt, conduct an internal chat with the agent without committing, and finally commit. The commit triggers a final agent response that becomes the node's permanent output.
+
+\textbf{Scope.} The state machine for node lifecycle. Internal chat UI inside the selected node's detail panel. Commit button. Streaming or polling updates from extension host to webview during execution.
+
+\textbf{Out of scope this week.} Tool use, file modification, fork, snapshot, floating chat.
+
+\subsection*{Week 3: Tool Use and File Modification}
+
+\textbf{Deliverable.} The committed agent can read files from the workspace and write files back. The user can observe file changes in the editor pane as the agent executes. Each committed node records the tool calls it made and the files it modified.
+
+\textbf{Scope.} Tool definitions for \texttt{read\_file} and \texttt{write\_file}. Tool execution loop in the extension host. Tool call results recorded into the node's data structure. The editor pane reflects file changes automatically via VS Code's file watching.
+
+\textbf{Out of scope this week.} Shell command execution. Multi-turn agent loops within a single node. Snapshot system.
+
+\subsection*{Week 4: Snapshot and Fork}
+
+\textbf{Deliverable.} Each committed node stores a content-addressable snapshot of the files it modified. The user can fork any committed node. Forking creates a new branch, restores the workspace files to the pre-node state, and switches the active branch.
+
+\textbf{Scope.} Content-addressable storage in \texttt{.zygote/snapshots/}. Snapshot capture on commit. Snapshot restoration on fork. Branch data model. Active branch tracking. Branch switching restores files.
+
+\textbf{Out of scope this week.} Branch comparison UI, merge, multi-turn agent loops.
+
+\begin{notebox}
+\textbf{Week 4 is the structural midpoint of the project.} The fork-and-restore mechanism is the core of the LinkedIn demonstration. By the end of this week, the central artifact of the launch is in principle producible. The remaining two weeks polish presentation rather than add capability.
+\end{notebox}
+
+\subsection*{Week 5: Polish and Floating Chat}
+
+\textbf{Deliverable.} The tree visualization is legible (proper indentation, status indicators, selection highlighting). Branch switching is accessible via a dropdown. The floating chat is implemented as a secondary panel. The detail pane formatting is consistent.
+
+\textbf{Scope.} UI refinement throughout. Floating chat implementation (ephemeral, not persisted). Minor bug fixes accumulated from weeks 1--4.
+
+\textbf{Out of scope this week.} New core features.
+
+\subsection*{Week 6: Recording and Launch}
+
+\textbf{Deliverable.} A 30--60 second screencast demonstrating the core loop. A GitHub repository with a README explaining setup. A LinkedIn post containing the screencast and a single-sentence framing of the product.
+
+\textbf{Scope.} Demo rehearsal. Screencast recording (likely several takes). README writing. GitHub repository preparation. LinkedIn post drafting. The post itself goes live at the end of week 6.
+
+\textbf{Out of scope this week.} Code changes beyond fixing recording-blocking bugs.
+
+\subsection*{Weekly Deliverable Summary}
+
+\begin{tabularx}{\textwidth}{@{}clX@{}}
+\toprule
+\textbf{Wk} & \textbf{Theme} & \textbf{Demonstrable artifact} \\
+\midrule
+1 & Tree Persistence & Single-node tree, persisted across restarts \\
+2 & Lifecycle & Uncommit/commit states with internal chat \\
+3 & Tool Use & Agent reads and writes real files \\
+4 & Fork & File system restoration on fork \\
+5 & Polish & Refined UI, floating chat \\
+6 & Launch & Public LinkedIn post with screencast \\
+\bottomrule
+\end{tabularx}
+
+%==============================================
+\section{Daily Schedule}
+\label{sec:daily}
+
+\subsection*{Time Allocation}
+
+The plan assumes the following daily schedule during Phase~2, scaled to the summer-with-paper-and-internship-search context:
+
+\begin{tabularx}{\textwidth}{@{}lcX@{}}
+\toprule
+\textbf{Activity} & \textbf{Daily} & \textbf{Notes} \\
+\midrule
+Zygote development & 5h & Two blocks of 2.5h, separated by at least one hour \\
+Paper writing & 1.5--2h & Single morning or evening block \\
+Internship search & 0.5--1h & Application submissions, recruiter follow-up \\
+Exercise & 1--1.5h & Existing PPL/football/run schedule \\
+Sleep & 7--8h & Non-negotiable \\
+\bottomrule
+\end{tabularx}
+
+\subsection*{Recommended Daily Structure}
+
+The five hours of Zygote development should be split into two blocks rather than a single five-hour block. Sustained focus on novel technical work degrades after roughly 2.5 hours; a break preserves quality for the second block.
+
+\begin{tabularx}{\textwidth}{@{}lX@{}}
+\toprule
+\textbf{Window} & \textbf{Activity} \\
+\midrule
+Morning (9:00--12:00) & Zygote Block A: 2.5h of focused implementation. The harder problem of the day goes here. \\
+\addlinespace
+Midday (12:00--14:00) & Lunch, paper writing, or rest. \\
+\addlinespace
+Afternoon (14:00--16:30) & Zygote Block B: 2.5h. Lower-risk tasks: UI refinement, testing, refactoring. \\
+\addlinespace
+Late afternoon (16:30--18:00) & Exercise. \\
+\addlinespace
+Evening (18:00--21:00) & Paper writing, internship search, social time. \\
+\addlinespace
+Pre-sleep (21:00--22:30) & Reading, dev log writing, planning the next day. Never coding. \\
+\bottomrule
+\end{tabularx}
+
+\subsection*{Weekly Rhythm}
+
+Six days of development, one day of rest. Recommended rest day: Sunday. The rest day is not optional; sustained six-day weeks without recovery produce code quality degradation by the end of week~3 even when the developer subjectively feels fine.
+
+%==============================================
+\section{Discipline and Guardrails}
+\label{sec:discipline}
+
+The plan depends on three commitments. Without these the schedule degrades to its worst-case duration regardless of total hours worked.
+
+\subsection*{Commitment 1: Calendared Time Blocks}
+
+Both Zygote blocks are scheduled in advance and treated as fixed appointments. ``9:00--12:00 Tuesday'' is a meeting, not a flexible intention. The author's existing push-pull-legs training schedule demonstrates capacity for fixed-time discipline; the same standard applies here.
+
+\subsection*{Commitment 2: One Weekly Demonstrable Artifact}
+
+Every week ends with something the author can demonstrate to another person in under two minutes. A week without a demonstrable artifact counts as zero progress, regardless of hours spent or code written. This converts the open-ended task into a sequence of falsifiable checkpoints.
+
+\subsection*{Commitment 3: Weekly Development Log}
+
+At the end of each week, the author writes a 200-word development log: what was completed, what blocked progress, what is planned for the following week. The log is private during Phase~2 but constitutes the primary source material for the launch blog post and any subsequent reflective writing. Documentation written during development is significantly more accurate than documentation reconstructed afterward.
+
+%==============================================
+\section{Risks and Mitigations}
+\label{sec:risks}
+
+\subsection*{Risk 1: Webview rendering failures consume multiple days}
+
+The webview content security policy frequently blocks scripts, styles, or resources without producing useful error messages. The author may spend a full day attempting to render a React application inside the webview and obtain no visible output.
+
+\textit{Mitigation.} Phase~1 Day~1 explicitly addresses this by starting from a working webview-and-React template. The template is treated as canonical and not modified beyond what is necessary until full understanding of the CSP is achieved.
+
+\subsection*{Risk 2: Tool use complexity underestimated}
+
+Week 3 is allocated for tool use implementation. This is the technically densest week of the plan: the agent loop must handle multi-step tool sequences, errors, and incremental output streaming back to the webview. Five days may not be sufficient.
+
+\textit{Mitigation.} Week 3 deliverables are scoped to two tools only (\texttt{read\_file}, \texttt{write\_file}), single-turn execution, and no streaming requirement. Multi-turn loops and additional tools are deferred to v0.2.
+
+\subsection*{Risk 3: Scope creep during weeks 5--6}
+
+As week 6 approaches, the author may attempt to add features that ``would make the demo better.'' Each additional feature postpones the launch by an indeterminate amount.
+
+\textit{Mitigation.} Week 4 is the final week in which new features are added. Weeks 5 and 6 are reserved for polish and launch preparation respectively. Any feature not present at the end of week 4 is automatically deferred to v0.2.
+
+\subsection*{Risk 4: Parallel commitments degrade development quality}
+
+Five hours of Zygote development, two hours of paper writing, and an hour of internship search per day is approximately eighteen total hours of cognitively demanding work, against a sustainable budget of approximately twelve hours for most individuals.
+
+\textit{Mitigation.} The plan acknowledges this and assigns paper and internship work to lower-quality time blocks (evenings, late afternoons). If quality degradation appears---measured by missed weekly deliverables, recurring small mistakes, or self-reported exhaustion---reduce paper writing to one hour daily and accept paper delay.
+
+\subsection*{Risk 5: External release of competing functionality}
+
+Anthropic's Agent View is currently in research preview. If Anthropic or another vendor ships tree visualization or fork-restoration functionality before the v0.1 launch, the perceived novelty of Zygote diminishes.
+
+\textit{Mitigation.} The launch criterion is intentionally narrow: file-state-bound fork is the demonstrated capability. This is genuinely absent from current public products and is unlikely to be shipped by a major vendor within six weeks. If a competing product launches during weeks 1--5, the response is to ship sooner with a sharper differentiation message rather than to extend the timeline.
+
+%==============================================
+\section{Launch Plan}
+\label{sec:launch}
+
+\subsection*{Day of Launch}
+
+At the end of week~6, the LinkedIn post goes live. The post contains the screencast, a single-sentence framing of the product, and a link to the GitHub repository. It does not contain explanatory paragraphs, requests for feedback, or extensive technical detail. The post's purpose is timestamp establishment and curiosity generation, not conversion.
+
+\subsection*{Two Weeks After Launch}
+
+A longer blog post is published, expanding on the LinkedIn announcement. The blog post is the appropriate venue for the philosophical framing (conversation as wrong unit of work, node as commitment, file state as evolution of thinking). Distribution channels include Hacker News, X, and the author's existing WeChat audience (in translation).
+
+\subsection*{Four Weeks After Launch}
+
+A reflective piece is published: lessons from building v0.1, what surprised the author, what failed. This piece is the foundation for the developer's identity in this space transitioning from ``person who built a tool'' to ``person with judgment about agent UX.'' The latter identity is what startup recruiters and investors respond to.
+
+\subsection*{Eight Weeks After Launch}
+
+A response piece commenting on recent ecosystem developments (Anthropic releases, competing tools, Cursor updates) framed through Zygote's value proposition. By this point the author is participating in industry conversation as a recognized voice rather than as an unknown developer.
+
+%==============================================
+\section*{Appendix A: Summer Parallel Workload}
+\addcontentsline{toc}{section}{Appendix A: Summer Parallel Workload}
+
+The plan operates against three concurrent summer commitments. The relative priority and time allocation is as follows:
+
+\begin{tabularx}{\textwidth}{@{}lcX@{}}
+\toprule
+\textbf{Commitment} & \textbf{Hours/day} & \textbf{Status at summer's end} \\
+\midrule
+Zygote v0.1 & 5 & Launched publicly with screencast and blog \\
+Paper writing & 1.5--2 & Complete first draft, ready for advisor review \\
+Internship search & 0.5--1 & Active applications submitted, recruiter pipeline established \\
+\bottomrule
+\end{tabularx}
+
+\medskip
+\noindent The intentional asymmetry reflects the plan's hypothesis that Zygote has the highest variance of outcomes among the three: a successful launch produces compounding career returns over months and years, while a delayed paper or a shifted internship cycle produces linear cost. The asymmetry is correct only if the launch actually occurs. A delayed Zygote launch combined with reduced effort on paper and internship work is the worst outcome and must be actively prevented.
+
+%==============================================
+\section*{Appendix B: Day-One Checklist}
+\addcontentsline{toc}{section}{Appendix B: Day-One Checklist}
+
+The author begins execution on the first business day following completion of this plan. Day one consists of:
+
+\begin{enumerate}
+  \item Open the specification document.
+  \item Execute Phase~0 in a single 2--2.5 hour session.
+  \item Submit revised specification for AI-assisted audit.
+  \item Process audit suggestions.
+  \item Schedule Phase~1 days into the calendar.
+  \item Write a 100-word commitment statement describing what the author expects to be true six weeks from today.
+\end{enumerate}
+
+The commitment statement is read at the start of each week during Phase~2.
+
+\vspace{2em}
+\begin{center}
+\rule{0.5\textwidth}{0.4pt}\\[0.5em]
+{\footnotesize\color{soft}\itshape End of plan.}
+\end{center}
+
+\end{document}

@@ -1,0 +1,68 @@
+\relax 
+\providecommand\hyper@newdestlabel[2]{}
+\providecommand\HyField@AuxAddToFields[1]{}
+\providecommand\HyField@AuxAddToCoFields[2]{}
+\@writefile{toc}{\contentsline {section}{\numberline {1}What Is Zygote?}{3}{section.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {1.1}The Problem Zygote Solves}{3}{subsection.1.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {1.2}The Mental Model}{3}{subsection.1.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {1.3}Technology Stack}{4}{subsection.1.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {2}Project Directory Structure}{5}{section.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.1}Top-Level Layout}{5}{subsection.2.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.2}Complete File Tree}{5}{subsection.2.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {3}The Three-Layer Architecture}{7}{section.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Architecture Diagram}{7}{subsection.3.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}Layer Responsibilities}{7}{subsection.3.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {4}Core Data Model}{8}{section.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}ZygoteTree --- The Root Container}{8}{subsection.4.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}ZygoteNode --- The Atomic Unit of Work}{8}{subsection.4.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}Node Status Lifecycle}{9}{subsection.4.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.4}ZygoteBranch --- A Named Line of Work}{9}{subsection.4.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.5}How Tree Structure Works}{9}{subsection.4.5}\protected@file@percent }
+\gdef \LT@i {\LT@entry 
+    {1}{134.0374pt}\LT@entry 
+    {1}{125.81102pt}\LT@entry 
+    {1}{148.26378pt}}
+\gdef \LT@ii {\LT@entry 
+    {1}{134.0374pt}\LT@entry 
+    {1}{125.81102pt}\LT@entry 
+    {1}{148.26378pt}}
+\@writefile{toc}{\contentsline {section}{\numberline {5}Message Protocol}{11}{section.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.1}Webview $\to $ Extension (User Actions)}{11}{subsection.5.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}Extension $\to $ Webview (State Updates)}{11}{subsection.5.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {6}Module Deep Dives}{12}{section.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.1}Entry Point: extension.ts}{12}{subsection.6.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.2}The Brain: ZygotePanel.ts}{12}{subsection.6.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.3}Pure State Logic: tree.ts}{13}{subsection.6.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.4}Disk I/O: persistence.ts}{14}{subsection.6.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.5}File Versioning: snapshots.ts}{14}{subsection.6.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.6}API Client: claude.ts}{15}{subsection.6.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.7}Agent Tools: tools.ts}{15}{subsection.6.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.8}Agent Execution: runner.ts}{16}{subsection.6.8}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {6.8.1}The runPreview() Workflow}{16}{subsubsection.6.8.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {6.8.2}Context Construction}{16}{subsubsection.6.8.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {6.8.3}Two Backend Implementations}{17}{subsubsection.6.8.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {7}The React UI}{18}{section.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.1}UI Layout}{18}{subsection.7.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.2}Component Breakdown}{18}{subsection.7.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.3}Key State in App.tsx}{19}{subsection.7.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {8}Complete Data Flow Walkthroughs}{20}{section.8}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.1}Walkthrough 1: Creating a Node and Running the Agent}{20}{subsection.8.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.2}Walkthrough 2: Forking a Branch}{21}{subsection.8.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.3}Walkthrough 3: Rejecting a Preview}{22}{subsection.8.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.4}Walkthrough 4: Switching Branches}{22}{subsection.8.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {9}File Snapshot System (Deep Dive)}{23}{section.9}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {9.1}How It Works}{23}{subsection.9.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {9.2}Deduplication Example}{23}{subsection.9.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {10}Persistence Format}{24}{section.10}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {11}Debug System}{25}{section.11}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {12}Build and Run}{26}{section.12}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {12.1}Build Scripts}{26}{subsection.12.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {12.2}Development Workflow}{26}{subsection.12.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {12.3}Extension Manifest (package.json)}{26}{subsection.12.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {13}What's NOT Built Yet (v0.1 Scope)}{27}{section.13}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {14}Key Design Decisions Summary}{28}{section.14}\protected@file@percent }
+\gdef \LT@iii {\LT@entry 
+    {1}{176.71652pt}\LT@entry 
+    {1}{219.39566pt}}
+\@writefile{toc}{\contentsline {section}{\numberline {15}Quick Reference: File $\to $ Purpose Lookup}{29}{section.15}\protected@file@percent }
+\gdef \@abspage@last{30}
