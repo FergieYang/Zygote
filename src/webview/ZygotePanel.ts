@@ -1,3 +1,31 @@
+/**
+ * ZygotePanel — extension-host controller that owns the Zygote webview.
+ *
+ * MEANING: the one bridge between html.ts's two worlds — the React UI
+ * (sandboxed webview) and the Node/VS Code backend. A per-window singleton
+ * (`currentPanel`) that carries no business logic itself; it's the switchboard
+ * wiring user intent to the backend modules.
+ *
+ * FUNCTION:
+ *   - owns the panel lifecycle (createOrShow / dispose) and the live webview.
+ *   - holds the authoritative in-memory `tree` (the branch/speculation state).
+ *   - inbound: maps each WebviewToExtMessage (createNode, previewNode,
+ *     switchBranch, deleteNode, quickAsk…) onto a pure backend call.
+ *   - outbound: posts ExtToWebviewMessage back (treeUpdated, output/thinking
+ *     streams, workspaceLocked/Unlocked) so the UI re-renders.
+ *   - serializes run vs. checkout (activeRunNodeId, pendingCheckoutNodeId) and
+ *     snapshots the workspace per node.
+ *
+ * POSITION — extension.ts creates it on `zygote.open`; html.ts (sibling)
+ * renders its page; agent/runner.ts does the AI work; state/{tree,persistence,
+ * snapshots}.ts mutate / save / restore; shared/types.ts is the message
+ * contract both sides speak. The controller in the middle:
+ * extension.ts → ZygotePanel → {tree, runner, snapshots}, html.ts the view side.
+ *                  ┌──→ html.ts / webview   ← the FRONTEND boundary (view)
+extension.ts ──→ ZygotePanel
+   (backend       └──→ tree / runner / snapshots  ← BACKEND logic
+    creates it)
+ */
 import * as vscode from 'vscode';
 import { getWebviewHtml } from './html.js';
 import { loadTree, saveTree } from '../state/persistence.js';
@@ -21,63 +49,82 @@ import type {
 } from '../shared/types.js';
 
 export class ZygotePanel {
+  // static = lives on the class, one shared slot (not per-instance); the singleton
+  // handle to the one open panel, or undefined when none is open. Static ≠ fixed: reassigned.
   public static currentPanel: ZygotePanel | undefined;
+  // static readonly = class-level AND set-once; the ID string VS Code uses to tag this webview type.
   private static readonly viewType = 'zygote.panel';
 
-  private readonly panel: vscode.WebviewPanel;
-  private readonly extensionUri: vscode.Uri;
-  private readonly secretStorage: vscode.SecretStorage;
-  private tree: ZygoteTree;
-  private disposables: vscode.Disposable[] = [];
-  private activeRunNodeId: NodeId | null = null;
-  private pendingCheckoutNodeId: NodeId | null = null;
+  // readonly = assigned once in the constructor, never rebound afterward.
+  private readonly panel: vscode.WebviewPanel;      // the live VS Code webview — the actual tab/surface
+  private readonly extensionUri: vscode.Uri;        // where the extension is installed — resolves asset paths
+  private readonly secretStorage: vscode.SecretStorage; // VS Code's encrypted store — holds the API key
+  // tree, activeRunNodeId, pendingCheckoutNodeId could be reassigned.
+  // disposables is mutated but never reassigned.
+  // mutated. e.g. .push() or .pop(), contents has been changed but still the same array object.
+  private tree: ZygoteTree;                         // authoritative in-memory app state (branches + nodes)
+  private disposables: vscode.Disposable[] = [];    // cleanup handles freed on dispose() — mutated, so not readonly
+  private activeRunNodeId: NodeId | null = null;    // node currently mid-run, or null when idle
+  private pendingCheckoutNodeId: NodeId | null = null; // checkout deferred until the active run finishes, or null
 
   public static createOrShow(
     extensionUri: vscode.Uri,
     secretStorage: vscode.SecretStorage,
     tree: ZygoteTree
   ): ZygotePanel {
+    // activeTextEditor = the editor the user is currently focused in (undefined if none).
+    // .viewColumn = which split/pane (column) that editor sits in — VS Code tiles editors
+    // into columns 1, 2, 3… left to right. We grab it so the Zygote panel opens in the
+    // same column the user is looking at; undefined when there's no active editor.
     const column = vscode.window.activeTextEditor
       ? vscode.window.activeTextEditor.viewColumn
       : undefined;
 
     // If we already have a panel, show it
     if (ZygotePanel.currentPanel) {
+      // bring the existing panel to the front, focus it in that panel
+      // the reveal method is an vsc api method.
       ZygotePanel.currentPanel.panel.reveal(column);
+      // swap in the latest tree data
       ZygotePanel.currentPanel.tree = tree;
+      // push that new tree to the ui so it re-renders.
+      // our own private postmessage method
       ZygotePanel.currentPanel.sendTreeUpdate();
+      // hand back the existing panel and skip creation
       return ZygotePanel.currentPanel;
     }
 
     // Otherwise, create a new panel
-    const panel = vscode.window.createWebviewPanel(
-      ZygotePanel.viewType,
-      'Zygote',
-      column || vscode.ViewColumn.One,
-      {
-        enableScripts: true,
-        retainContextWhenHidden: true,
-        localResourceRoots: [
-          vscode.Uri.joinPath(extensionUri, 'dist', 'webview'),
-        ],
-      }
-    );
-
+  const panel = vscode.window.createWebviewPanel(   // ask VS Code for a fresh raw webview pane
+    ZygotePanel.viewType,          // internal type id 'zygote.panel' — tags what kind of webview this is
+    'Zygote',                      // the tab title the user sees
+    column || vscode.ViewColumn.One, // put it in the user's column; if none, fall back to column 1
+    {
+      enableScripts: true,             // allow JS to run inside (needed — it's a React app)
+      retainContextWhenHidden: true,   // keep the webview alive when tab is hidden (don't reload on switch)
+      localResourceRoots: [            // whitelist the only folder the webview may load files from
+        vscode.Uri.joinPath(extensionUri, 'dist', 'webview'), // = <extension>/dist/webview (the built JS/CSS)
+      ],
+    }
+  );
+    // create the new panel of zygote as here
     ZygotePanel.currentPanel = new ZygotePanel(
-      panel,
+      panel, // pass the exact raw created panel to the constructor
       extensionUri,
       secretStorage,
       tree
     );
     return ZygotePanel.currentPanel;
   }
-
+  // Private only called from inside the class.
+  // 
   private constructor(
     panel: vscode.WebviewPanel,
     extensionUri: vscode.Uri,
     secretStorage: vscode.SecretStorage,
     tree: ZygoteTree
   ) {
+    // this: save the ingredients I was given to myself, so my methods can use them later.
     this.panel = panel;
     this.extensionUri = extensionUri;
     this.secretStorage = secretStorage;
@@ -85,7 +132,9 @@ export class ZygotePanel {
 
     // Set the webview's HTML content
     this.panel.webview.html = getWebviewHtml(
+      // How do I write that path so the browser sandbox can load it?
       this.panel.webview,
+      // where do the built files live on disk?
       this.extensionUri
     );
 
@@ -93,24 +142,36 @@ export class ZygotePanel {
     this.panel.webview.onDidReceiveMessage(
       (message: Record<string, unknown>) => {
         if (message.type === 'webviewReady') {
+    // just feed the UI for its first tree
           this.sendTreeUpdate();
           return;
         }
+    // the big switch to the backend calls
         this.handleMessage(message as WebviewToExtMessage);
       },
       null,
+    // subscription deposit their cancel-tickets into disposable at birth and dispose()
+    // cashes them all in at death, so we don't leak memory. The webview is a sandboxed iframe, and if the user closes it, we need to free the event listener.
       this.disposables
     );
 
     // Handle disposal
+    // this.dispose() is the function to run per message
+    // null = thisArg is the unused one and act as the placeholder
+    // this.disposables = collection bucket and the bucket to drop the cancel-ticket into.
     this.panel.onDidDispose(() => this.dispose(), null, this.disposables);
 
     // Tree is sent when the webview signals it's ready (webviewReady message)
   }
 
   public dispose(): void {
+    // dbg() fetch the debugger logger
+    // life cycle = the category of this log message
+    // ZygotePanel disposed = the message
     dbg()?.info('lifecycle', 'ZygotePanel disposed');
     ZygotePanel.currentPanel = undefined;
+    // dispose of the panel itself.
+    // dispose all the own separate registration of the message listener
     this.panel.dispose();
     while (this.disposables.length) {
       const d = this.disposables.pop();
@@ -119,7 +180,7 @@ export class ZygotePanel {
       }
     }
   }
-
+  // Zygote's own private method defined right in this class of the ours of other zygote files.
   public captureDebugSnapshot(): string {
     const extra = this.runtimeState();
     return dbg()?.captureSnapshot(this.tree, extra) ?? '(logger not initialized)';
