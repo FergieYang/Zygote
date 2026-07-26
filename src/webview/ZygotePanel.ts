@@ -21,10 +21,13 @@
  * snapshots}.ts mutate / save / restore; shared/types.ts is the message
  * contract both sides speak. The controller in the middle:
  * extension.ts → ZygotePanel → {tree, runner, snapshots}, html.ts the view side.
- *                  ┌──→ html.ts / webview   ← the FRONTEND boundary (view)
-extension.ts ──→ ZygotePanel
-   (backend       └──→ tree / runner / snapshots  ← BACKEND logic
-    creates it)
+ * extension.ts ──→ ZygotePanel ──┬──→ html.ts (webview/React UI)
+                               ├──→ state/tree.ts, state/persistence.ts, state/snapshots.ts
+                               ├──→ agent/runner.ts ──→ agent/claude.ts, agent/tools.ts
+                               ├──→ shared/types.ts (message contract, used by both sides)
+                               └──→ debug/logger.ts
+ * The backend modules (tree, runner, snapshots) aren't running alongside ZygotePanel; 
+ * they're passive libraries of functions that ZygotePanel calls when a message arrives.
  */
 import * as vscode from 'vscode';
 import { getWebviewHtml } from './html.js';
@@ -66,20 +69,25 @@ export class ZygotePanel {
   private disposables: vscode.Disposable[] = [];    // cleanup handles freed on dispose() — mutated, so not readonly
   private activeRunNodeId: NodeId | null = null;    // node currently mid-run, or null when idle
   private pendingCheckoutNodeId: NodeId | null = null; // checkout deferred until the active run finishes, or null
-
+  // 'method' or 'function' defined inside the class ZygotePanel.
   public static createOrShow(
     extensionUri: vscode.Uri,
     secretStorage: vscode.SecretStorage,
     tree: ZygoteTree
+    // name: Type: default in typescript language, that "this thing has this type".
   ): ZygotePanel {
     // activeTextEditor = the editor the user is currently focused in (undefined if none).
     // .viewColumn = which split/pane (column) that editor sits in — VS Code tiles editors
     // into columns 1, 2, 3… left to right. We grab it so the Zygote panel opens in the
     // same column the user is looking at; undefined when there's no active editor.
+    // // typical ts logic here: condition ? valueIfTrue : valueIfFalse
+    // // // column is the number of the splitted group inside the vsc
+    // // // and the way to split the group inside the vsc is use 'Ctrl+\'
     const column = vscode.window.activeTextEditor
       ? vscode.window.activeTextEditor.viewColumn
       : undefined;
-
+    // meaning: opening zygote twice doesn't give you two panels
+    // the second open just refocuses and refreshes the one that's already there.    
     // If we already have a panel, show it
     if (ZygotePanel.currentPanel) {
       // bring the existing panel to the front, focus it in that panel
@@ -96,6 +104,7 @@ export class ZygotePanel {
 
     // Otherwise, create a new panel
   const panel = vscode.window.createWebviewPanel(   // ask VS Code for a fresh raw webview pane
+    // always fixed, always the class itself
     ZygotePanel.viewType,          // internal type id 'zygote.panel' — tags what kind of webview this is
     'Zygote',                      // the tab title the user sees
     column || vscode.ViewColumn.One, // put it in the user's column; if none, fall back to column 1
@@ -108,6 +117,7 @@ export class ZygotePanel {
     }
   );
     // create the new panel of zygote as here
+    // create a new instance of ZygotePanel, wrap the raw panel in our own class.
     ZygotePanel.currentPanel = new ZygotePanel(
       panel, // pass the exact raw created panel to the constructor
       extensionUri,
@@ -117,7 +127,7 @@ export class ZygotePanel {
     return ZygotePanel.currentPanel;
   }
   // Private only called from inside the class.
-  // 
+  // 'this' works in every instance method of the class 'down' in the class body
   private constructor(
     panel: vscode.WebviewPanel,
     extensionUri: vscode.Uri,
@@ -149,6 +159,7 @@ export class ZygotePanel {
     // the big switch to the backend calls
         this.handleMessage(message as WebviewToExtMessage);
       },
+     // place skipper for nothing
       null,
     // subscription deposit their cancel-tickets into disposable at birth and dispose()
     // cashes them all in at death, so we don't leak memory. The webview is a sandboxed iframe, and if the user closes it, we need to free the event listener.
@@ -159,8 +170,11 @@ export class ZygotePanel {
     // this.dispose() is the function to run per message
     // null = thisArg is the unused one and act as the placeholder
     // this.disposables = collection bucket and the bucket to drop the cancel-ticket into.
-    this.panel.onDidDispose(() => this.dispose(), null, this.disposables);
-
+    this.panel.onDidDispose(          // "when the user closes the Zygote tab..."
+    () => this.dispose(),           // "...run my cleanup method"
+    null,                           // (skip the thisArg slot — arrow fn doesn't need it)
+    this.disposables                // "and put this subscription's cancel-ticket in the bucket too"
+    );
     // Tree is sent when the webview signals it's ready (webviewReady message)
   }
 
@@ -180,17 +194,24 @@ export class ZygotePanel {
       }
     }
   }
-  // Zygote's own private method defined right in this class of the ours of other zygote files.
+
+  // tab closed
+  // └→ onDidDispose fires        (the trigger)
+  // └→ this.dispose() runs  (the cleanup routine)
+  //      └→ while loop empties the bucket
+  //           └→ ...which cancels the onDidDispose subscription too
+  // Each time it is called, a fresh, at-this-moment snapshot of the tree is captured.
   public captureDebugSnapshot(): string {
     const extra = this.runtimeState();
     return dbg()?.captureSnapshot(this.tree, extra) ?? '(logger not initialized)';
   }
-
+  // human-readable markdown file of the entire tree
   public dumpTree(): string {
     const extra = this.runtimeState();
     return dbg()?.dumpTree(this.tree, extra) ?? '(logger not initialized)';
   }
-
+  // Record<string, unknown> = 
+  // an object type with keys of type string and values of type unknown
   private runtimeState(): Record<string, unknown> {
     return {
       activeRunNodeId: this.activeRunNodeId,
@@ -204,9 +225,9 @@ export class ZygotePanel {
    * Update the tree and persist it.
    */
   private updateTree(tree: ZygoteTree): void {
-    this.tree = tree;
-    saveTree(tree.workspaceRoot, tree);
-    this.sendTreeUpdate();
+  this.tree = tree;                      // 1. MEMORY — replace the panel's in-RAM copy
+  saveTree(tree.workspaceRoot, tree);    // 2. DISK — write it to a file in the workspace
+  this.sendTreeUpdate();                 // 3. UI — post it to the webview so React re-renders
   }
 
   /**
