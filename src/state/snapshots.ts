@@ -20,8 +20,8 @@ const SNAPSHOTS_DIR = 'snapshots';
  * Compute the SHA-256 hex digest of file content.
  * This hash is the identity of the content, identical content always produces the same hash.
  */
-export function hashContent(content: string): string {
-  return crypto.createHash('sha256').update(content, 'utf-8').digest('hex');
+export function hashContent(content: Buffer): string {
+  return crypto.createHash('sha256').update(content).digest('hex');
 }
 
 /**
@@ -29,7 +29,7 @@ export function hashContent(content: string): string {
  * Save content to the content-addressable snapshot store.
  * Returns the hash (filename) under which it was saved.
  */
-export function saveSnapshot(workspaceRoot: string, content: string): string {
+export function saveSnapshot(workspaceRoot: string, content: Buffer): string {
   ensureZygoteDir(workspaceRoot);
   const hash = hashContent(content);
   const snapshotPath = path.join(
@@ -41,7 +41,7 @@ export function saveSnapshot(workspaceRoot: string, content: string): string {
   // filename makes "exists" equivalent to "already have this exact content.
   // Content-addressable: skip write if the file already exists
   if (!fs.existsSync(snapshotPath)) {
-    fs.writeFileSync(snapshotPath, content, 'utf-8');
+    fs.writeFileSync(snapshotPath, content);
   }
 
   return hash;
@@ -55,7 +55,7 @@ export function saveSnapshot(workspaceRoot: string, content: string): string {
 export function loadSnapshot(
   workspaceRoot: string,
   hash: string
-): string {
+): Buffer {
   const snapshotPath = path.join(
     workspaceRoot,
     ZYGOTE_DIR,
@@ -67,7 +67,7 @@ export function loadSnapshot(
     throw new Error(`Snapshot not found: ${hash}`);
   }
 
-  return fs.readFileSync(snapshotPath, 'utf-8');
+  return fs.readFileSync(snapshotPath);
 }
 
 /**
@@ -92,8 +92,8 @@ export function captureWorkspaceSnapshot(
     if (!fs.existsSync(absPath)) {
       continue;
     }
-
-    const content = fs.readFileSync(absPath, 'utf-8');
+    // entire content of the file as raw bytes — binary-safe
+    const content = fs.readFileSync(absPath);
     const hash = saveSnapshot(workspaceRoot, content);
     const relPath = path.relative(workspaceRoot, absPath);
     fileHashes[relPath] = hash;
@@ -122,7 +122,7 @@ export function restoreWorkspaceSnapshot(
       fs.mkdirSync(dir, { recursive: true });
     }
 
-    fs.writeFileSync(absPath, content, 'utf-8');
+    fs.writeFileSync(absPath, content);
   }
 }
 

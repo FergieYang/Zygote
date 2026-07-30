@@ -29,6 +29,8 @@
  * The backend modules (tree, runner, snapshots) aren't running alongside ZygotePanel; 
  * they're passive libraries of functions that ZygotePanel calls when a message arrives.
  */
+// ./ — "start in the same directory as this file"
+// ../ — "go up one directory level from this file"
 import * as vscode from 'vscode';
 import { getWebviewHtml } from './html.js';
 import { loadTree, saveTree } from '../state/persistence.js';
@@ -38,6 +40,7 @@ import {
   updateNodePrompt,
   deleteNode,
   deleteBranch,
+  // for future review
   switchBranch,
   appendChatMessage,
 } from '../state/tree.js';
@@ -51,6 +54,9 @@ import type {
   ExtToWebviewMessage,
 } from '../shared/types.js';
 
+// Public: accessible from anywhere
+// Private: only accessible from within the class
+// protected: inside this class and its subclasses
 export class ZygotePanel {
   // static = lives on the class, one shared slot (not per-instance); the singleton
   // handle to the one open panel, or undefined when none is open. Static ≠ fixed: reassigned.
@@ -67,8 +73,10 @@ export class ZygotePanel {
   // mutated. e.g. .push() or .pop(), contents has been changed but still the same array object.
   private tree: ZygoteTree;                         // authoritative in-memory app state (branches + nodes)
   private disposables: vscode.Disposable[] = [];    // cleanup handles freed on dispose() — mutated, so not readonly
-  private activeRunNodeId: NodeId | null = null;    // node currently mid-run, or null when idle
-  private pendingCheckoutNodeId: NodeId | null = null; // checkout deferred until the active run finishes, or null
+  private activeRunNodeId: NodeId | null = null;    // node currently under running, or null when nothing runs
+  private pendingCheckoutNodeId: NodeId | null = null;
+  // UI Selection: see the node work immediately
+  // pendingCheckoutNodeId only swith to the selected code base until the active running node finishes
   // 'method' or 'function' defined inside the class ZygotePanel.
   public static createOrShow(
     extensionUri: vscode.Uri,
@@ -127,7 +135,8 @@ export class ZygotePanel {
     return ZygotePanel.currentPanel;
   }
   // Private only called from inside the class.
-  // 'this' works in every instance method of the class 'down' in the class body
+  // tree: data/content for all the branches, nodes chat messages and snapshots
+  // panel: the actual visible tab
   private constructor(
     panel: vscode.WebviewPanel,
     extensionUri: vscode.Uri,
@@ -147,9 +156,14 @@ export class ZygotePanel {
       // where do the built files live on disk?
       this.extensionUri
     );
-
+    // standard way of the event-subscription signature
+    // listener: the function to call when a message is received
+    // thisArg: the value to use as 'this' when invoking the listener
+    // disposables: an array to hold the cleanup handles for the event listener
     // Listen for messages from the webview
     this.panel.webview.onDidReceiveMessage(
+      // Record<K,V> = an object type with keys of type K and values of type V
+      // Record<string, unknown> = an object type with keys of type string and values of type unknown
       (message: Record<string, unknown>) => {
         if (message.type === 'webviewReady') {
     // just feed the UI for its first tree
@@ -200,18 +214,25 @@ export class ZygotePanel {
   // └→ this.dispose() runs  (the cleanup routine)
   //      └→ while loop empties the bucket
   //           └→ ...which cancels the onDidDispose subscription too
-  // Each time it is called, a fresh, at-this-moment snapshot of the tree is captured.
+
+
+
+  // raw JSON snapshot of the tree for debugging purposes
   public captureDebugSnapshot(): string {
     const extra = this.runtimeState();
     return dbg()?.captureSnapshot(this.tree, extra) ?? '(logger not initialized)';
   }
-  // human-readable markdown file of the entire tree
+  // formatted markdown for humans
   public dumpTree(): string {
     const extra = this.runtimeState();
     return dbg()?.dumpTree(this.tree, extra) ?? '(logger not initialized)';
   }
-  // Record<string, unknown> = 
-  // an object type with keys of type string and values of type unknown
+  
+  // Design Logic: extra info for debugging of volatile, in-the-moment context that lives only in memory
+  // activeRunNodeId: was a run in progress?
+  // pendingCheckoutNodeId: was a switch queued and waiting?
+  // panelVisible: Was the Zygote tab actually on screen?
+  // backendSettting: Which AI backend was configured
   private runtimeState(): Record<string, unknown> {
     return {
       activeRunNodeId: this.activeRunNodeId,
@@ -239,14 +260,20 @@ export class ZygotePanel {
 
   /**
    * Post a message to the webview.
+   * Sending the message requires the panel object
    */
   private postMessage(message: ExtToWebviewMessage): void {
     this.panel.webview.postMessage(message);
   }
 
+
+  // only logic, restore the hashes only after the active running node has been finished
   private async executePendingCheckout(): Promise<void> {
     if (this.pendingCheckoutNodeId) {
       const toNode = this.tree.nodes[this.pendingCheckoutNodeId];
+      // logic: whereever one "?" not existed, the whole hashed turn out to be "undefined"
+      // after: the node's finished result.
+      // fileHashes: 
       const checkoutHashes = toNode?.workspaceSnapshot?.after || toNode?.workspaceSnapshot?.fileHashes;
       if (checkoutHashes) {
         restoreWorkspaceSnapshot(
@@ -264,10 +291,14 @@ export class ZygotePanel {
     handleQuickAsk(
       `Summarize this coding task in 3-5 words as a short title. Reply with ONLY the title, no quotes, no punctuation at the end.\n\nTask: ${prompt}`,
       this.secretStorage
+      // when the operation fails, do this with the result
     ).then((title) => {
+      // clean the edges and caps length at 60 characters
       const trimmed = title.trim().slice(0, 60);
+      // return nothing useful
       if (!trimmed) return;
       const node = this.tree.nodes[nodeId];
+      // node deleted, nothing to rename
       if (!node) return;
       const updatedNode = { ...node, title: trimmed };
       this.tree = {
@@ -276,11 +307,14 @@ export class ZygotePanel {
       };
       saveTree(this.tree.workspaceRoot, this.tree);
       this.sendTreeUpdate();
+    // when the operation fails, do this with the error of doing nothing
     }).catch(() => {
-      // Keep the truncated prompt as title if summarization fails
     });
   }
-
+  // callback = during, still going of the run reports
+  // answer text of ai
+  // reasoning text of ai
+  // delta means the next ongoing piece
   private runPreviewCallbacks() {
     return {
       onTreeUpdated: (tree: ZygoteTree) => {
@@ -295,11 +329,14 @@ export class ZygotePanel {
       },
     };
   }
-
+  // Capture the current state of the workspace as a snapshot.
   private async captureCurrentSnapshot(): Promise<Record<string, string>> {
     const pattern = new vscode.RelativePattern(this.tree.workspaceRoot, '**/*');
     const exclude = '**/node_modules/**,**/.zygote/**,**/.git/**,**/dist/**';
     const uris = await vscode.workspace.findFiles(pattern, exclude, 500);
+    // Uri: file:///Users/Fergie/...
+    // .fsPath : /Users/Fergie/...
+    // .map(...): Uri[] in -> string[] out (file paths)
     const filePaths = uris.map((uri) => uri.fsPath);
     return captureWorkspaceSnapshot(this.tree.workspaceRoot, filePaths);
   }
@@ -421,14 +458,15 @@ export class ZygotePanel {
             this.sendTreeUpdate();
             break;
           }
-          // Save current node's workspace state before switching
+          // Save current node's workspace state before switching.
+          // Merge (not replace) so a run's `before` snapshot survives — reject needs it.
           if (message.fromNodeId) {
             const fromNode = this.tree.nodes[message.fromNodeId];
             if (fromNode) {
               const hashes = await this.captureCurrentSnapshot();
               const updatedFrom = {
                 ...fromNode,
-                workspaceSnapshot: { fileHashes: hashes },
+                workspaceSnapshot: { ...fromNode.workspaceSnapshot, after: hashes },
               };
               this.tree = {
                 ...this.tree,

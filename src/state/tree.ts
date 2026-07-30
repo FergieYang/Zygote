@@ -149,6 +149,7 @@ export function createNode(
     parentId,
     branchId: targetBranchId,
     createdAt: Date.now(),
+    // upgrade in zygote panel
     title: prompt.slice(0, 60) + (prompt.length > 60 ? '...' : ''),
     prompt,
     chat: [

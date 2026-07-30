@@ -40,7 +40,9 @@ export interface ZygoteNode {
   toolCalls?: ToolCall[];
   error?: string;
   workspaceSnapshot?: {
-    fileHashes: Record<string, FileHash>;
+    before?: Record<string, FileHash>;
+    after?: Record<string, FileHash>;
+    fileHashes?: Record<string, FileHash>;  // Legacy — kept for backward compatibility with existing saved trees
   };
   tokens?: { input: number; output: number };
 }
