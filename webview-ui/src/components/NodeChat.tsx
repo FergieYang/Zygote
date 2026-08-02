@@ -67,9 +67,6 @@ const NodeChat: React.FC<NodeChatProps> = ({ node }) => {
                 msg.content
               )}
             </div>
-            <div style={styles.msgTime}>
-              {new Date(msg.timestamp).toLocaleTimeString()}
-            </div>
           </div>
         ))}
         <div ref={chatEndRef} />
@@ -138,12 +135,6 @@ const styles: Record<string, React.CSSProperties> = {
   msgContent: {
     whiteSpace: 'pre-wrap',
     wordBreak: 'break-word',
-  },
-  msgTime: {
-    fontSize: '9px',
-    opacity: 0.4,
-    textAlign: 'right',
-    marginTop: '4px',
   },
   inputRow: {
     display: 'flex',

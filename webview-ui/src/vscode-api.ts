@@ -1,9 +1,25 @@
 /**
- * Typed wrapper around the VS Code webview API.
+ * The bridge between the webview UI and the extension host — the only file in
+ * webview-ui that talks to VS Code directly. It mirrors the shared data model
+ * (tree, nodes, branches) and the two message protocols from src/shared/types.ts,
+ * and wraps acquireVsCodeApi() in typed postMessage/onMessage helpers so the rest
+ * of the UI never handles raw, untyped messages.
  */
 
+/**
+ * src/webview/ - the extension-host side of the webview
+ * webview-ui/ - the UI itself, a standalone web app
+ */
+/** as here for the bridge:
+ * Browser end: this file, sends messages out via postMessage() and 
+ * receives them via onMessage()
+ * Extension end: ZygotePanel.ts, onDidReceiveMessage handler what the UI sends and 
+ * webview.postMessage() sends updates back.
+ */
 // Types mirrored from the extension (keep in sync with src/shared/types.ts)
 // We duplicate minimally to avoid complex build-time sharing.
+// Typical TypeScript feature, not JavaScript, 
+// completely erased when the code compiles
 export type NodeId = string;
 export type BranchId = string;
 export type FileHash = string;
@@ -14,6 +30,9 @@ export type NodeStatus =
   | 'committed'
   | 'error';
 
+
+// In TypeScript language: interface describes the shape of an object
+
 export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
@@ -22,7 +41,9 @@ export interface ChatMessage {
 
 export interface ToolCall {
   tool: 'read_file' | 'write_file' | 'list_files' | 'search_files';
+  // content optional input to the tool call
   input: { path: string; content?: string };
+  // success flag for the tool execution
   result: { ok: boolean; data?: string; error?: string };
 }
 
