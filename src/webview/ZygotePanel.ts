@@ -330,6 +330,7 @@ export class ZygotePanel {
     };
   }
   // Capture the current state of the workspace as a snapshot.
+  // called when you switched away from that node
   private async captureCurrentSnapshot(): Promise<Record<string, string>> {
     const pattern = new vscode.RelativePattern(this.tree.workspaceRoot, '**/*');
     const exclude = '**/node_modules/**,**/.zygote/**,**/.git/**,**/dist/**';
@@ -343,6 +344,7 @@ export class ZygotePanel {
 
   /**
    * Handle incoming messages from the webview.
+   * Usage of Promise: give you a ticket and then move on without blocking the main thread.
    */
   private async handleMessage(message: WebviewToExtMessage): Promise<void> {
     dbg()?.info('msg', `webview → ext: ${message.type}`, this.messagePayload(message));
@@ -358,6 +360,7 @@ export class ZygotePanel {
             message.prompt
           );
           this.updateTree(result.tree);
+          // only if the user actually type something useful in the node, run the node
           if (message.prompt.trim()) {
             // Async title summarization (non-blocking)
             this.summarizeNodeTitle(result.nodeId, message.prompt);
@@ -418,7 +421,7 @@ export class ZygotePanel {
           await this.executePendingCheckout();
           break;
         }
-
+        // only executed in the re-try of the failed node
         case 'previewNode': {
           this.activeRunNodeId = message.nodeId;
           this.tree = await runPreview(
@@ -431,7 +434,7 @@ export class ZygotePanel {
           await this.executePendingCheckout();
           break;
         }
-
+        // switch back to the before state of the running, only if it exists
         case 'rejectPreview': {
           const node = this.tree.nodes[message.nodeId];
           const beforeHashes = node?.workspaceSnapshot?.before || node?.workspaceSnapshot?.fileHashes;
@@ -445,14 +448,27 @@ export class ZygotePanel {
           }
           break;
         }
+        // feature: click another node
+        // save: capture current node's workspace state that the user is leaving
+        // // checkout: restore the target node's workspace state (deferred until the active run finishes, 
+        // then unlocked)
+        
 
+        // save is optional, checkout is executional
+        // arrival is the purpose, departure is a circumstance
         case 'saveAndCheckout': {
+          // is AI current running?
           if (this.activeRunNodeId) {
+        // put to the later executePendingCheckout()
             this.pendingCheckoutNodeId = message.toNodeId;
             const lockedNode = this.tree.nodes[this.activeRunNodeId];
             this.postMessage({
               type: 'workspaceLocked',
               lockedToNodeId: this.activeRunNodeId,
+              // '?': optional chaining: if the lockedNode doesn't exist, produce 'undefined' instead of crashing.
+              // '??': nullish coalescing: if left side is null/undefined, use the right side instead.
+              // '||': falls back on anything falsy: 'undefined', 'null', "", '0', 'false'
+              // '??': falls back only on 'undefined' or 'null'
               lockedToTitle: lockedNode?.title ?? 'running node',
             });
             this.sendTreeUpdate();
@@ -460,14 +476,21 @@ export class ZygotePanel {
           }
           // Save current node's workspace state before switching.
           // Merge (not replace) so a run's `before` snapshot survives — reject needs it.
+
+          // App.tsx: fromNodeId: the node being left
+          // toNodeId: the node being arrived at
           if (message.fromNodeId) {
             const fromNode = this.tree.nodes[message.fromNodeId];
             if (fromNode) {
               const hashes = await this.captureCurrentSnapshot();
               const updatedFrom = {
+                // ...: spread operator
+                // { ...obj, field: newValue }   // "everything as before, but with this one change"
+                // [ ...arr, newItem ]           // works on arrays too: all existing items, plus one
                 ...fromNode,
                 workspaceSnapshot: { ...fromNode.workspaceSnapshot, after: hashes },
               };
+              // carry all other fields, with only node field is changed
               this.tree = {
                 ...this.tree,
                 nodes: { ...this.tree.nodes, [message.fromNodeId]: updatedFrom },
@@ -487,13 +510,13 @@ export class ZygotePanel {
           this.sendTreeUpdate();
           break;
         }
-
+        // switchBranch comes from the tree.ts
         case 'switchBranch': {
           const switched = switchBranch(this.tree, message.branchId);
           this.updateTree(switched);
           break;
         }
-
+        // only called from the 'Delete branch button'
         case 'deleteBranch': {
           const branchToDelete = this.tree.branches[message.branchId];
           if (this.tree.activeBranchId === message.branchId && branchToDelete?.parentBranchId) {
@@ -507,10 +530,11 @@ export class ZygotePanel {
         case 'deleteNode': {
           const nodeToDelete = this.tree.nodes[message.nodeId];
           const deleted = deleteNode(this.tree, message.nodeId);
-          this.updateTree(deleted);
+          this.updateTree(deleted);  // tree updated here after the delete, change the tree data
           // Revert workspace to parent node's snapshot
           if (nodeToDelete?.parentId) {
             const parent = deleted.nodes[nodeToDelete.parentId];
+            // look up the already-stored manifest
             const parentHashes = parent?.workspaceSnapshot?.after || parent?.workspaceSnapshot?.fileHashes;
             if (parentHashes) {
               restoreWorkspaceSnapshot(
@@ -530,6 +554,7 @@ export class ZygotePanel {
             );
             this.postMessage({ type: 'quickAskResponse', response });
           } catch (err) {
+            // Error = JS's standard error object type, check if the err is a proper error object
             const errorMsg =
               err instanceof Error ? err.message : String(err);
             this.postMessage({ type: 'error', message: errorMsg });
@@ -539,15 +564,18 @@ export class ZygotePanel {
       }
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : String(err);
+      // dbg(): general-purpose debug logger, error reporting is just one of its jobs
       dbg()?.error('handler', `Error handling "${message.type}"`, {
         error: errorMsg,
+      // stack trace of the error message as output: multi-line string for every error object carries
+      // stack: tells you where and via which path
         stack: err instanceof Error ? err.stack : undefined,
       });
       this.postMessage({ type: 'error', message: errorMsg });
       vscode.window.showErrorMessage(`Zygote: ${errorMsg}`);
     }
   }
-
+  // Sole purpose = debug logger, the return value, only the log-useful fields
   private messagePayload(message: WebviewToExtMessage): Record<string, unknown> {
     switch (message.type) {
       case 'createNode':
