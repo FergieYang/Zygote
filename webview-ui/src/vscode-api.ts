@@ -47,6 +47,8 @@ export interface ToolCall {
   result: { ok: boolean; data?: string; error?: string };
 }
 
+// createAt is the moment the node or branch has been created
+// its main purpose is for ordering
 export interface ZygoteNode {
   id: NodeId;
   parentId: NodeId | null;
@@ -110,12 +112,18 @@ export type ExtToWebviewMessage =
   | { type: 'error'; message: string; nodeId?: NodeId }
   | { type: 'quickAskResponse'; response: string };
 
+// pure helper function, used in Tree.tsx
+// walk path from the head backwards up to the root
 export function getVisibleNodeIds(tree: ZygoteTree): Set<NodeId> {
   const branch = tree.branches[tree.activeBranchId];
+// no branch, or branch with no nodes yet -> nothing visible
   if (!branch?.headNodeId) return new Set();
   const visible = new Set<NodeId>();
+// start at the tip or head of the branch
+// if the branch is empty, set the head to be null
   let cur: NodeId | null = branch.headNodeId;
   while (cur) {
+// only check if zygote node exist here
     const node: ZygoteNode | undefined = tree.nodes[cur];
     if (!node) break;
     visible.add(cur);
@@ -124,7 +132,9 @@ export function getVisibleNodeIds(tree: ZygoteTree): Set<NodeId> {
   return visible;
 }
 
-// VS Code API singleton
+// VS Code API singleton: exact method vsc itself gives every webview
+// postMessage: the only channel to the sandbox, a JSON message to the extension host
+// getState / setState: persist state within the webview, especially when the tab is switched/
 interface VsCodeApi {
   postMessage(message: WebviewToExtMessage): void;
   getState(): unknown;
