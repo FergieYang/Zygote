@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { ZygotePanel } from './webview/ZygotePanel.js';
+// the tool of read the tree from the disk
 import { loadTree } from './state/persistence.js';
 import { initDebugLogger, dbg } from './debug/logger.js';
 
@@ -19,12 +20,12 @@ export function activate(context: vscode.ExtensionContext): void {
         );
         return;
       }
-
+      // the first opened folder
       const workspaceRoot = workspaceFolders[0].uri.fsPath;
       dbg()?.info('lifecycle', 'Opening Zygote panel', { workspaceRoot });
-
+      // reads/repairs tree.json from disk
       const tree = loadTree(workspaceRoot);
-
+      // builds the webview with that tree passed in
       ZygotePanel.createOrShow(
         context.extensionUri,
         context.secrets,
@@ -39,8 +40,10 @@ export function activate(context: vscode.ExtensionContext): void {
       const panel = ZygotePanel.currentPanel;
       if (!panel) {
         vscode.window.showWarningMessage('Zygote panel is not open.');
+        // early exist
         return;
       }
+      // extension.ts (command) → ZygotePanel (owns the live state) → debug logger (writes the file).
       const snapshotPath = panel.captureDebugSnapshot();
       vscode.window.showInformationMessage(`Zygote debug snapshot saved to ${snapshotPath}`);
     }
@@ -58,10 +61,11 @@ export function activate(context: vscode.ExtensionContext): void {
       vscode.window.showInformationMessage(`Zygote tree dump saved to ${dumpPath}`);
     }
   );
+  // cleanup bucket: VS Code auto-disposes these when the extension deactivates
 
   context.subscriptions.push(openCommand, snapshotCommand, dumpTreeCommand);
 }
-
+// nothing to do: command disposal is handled by context.subscriptions
 export function deactivate(): void {
   // Clean up if needed
 }
