@@ -22,6 +22,9 @@
 // completely erased when the code compiles
 export type NodeId = string;
 export type BranchId = string;
+// SHA-256 hash of a file's content, as a 64-character hex string
+// example: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+// One hash = the fingerprint of one file's bytes at one moment.
 export type FileHash = string;
 
 export type NodeStatus =
@@ -33,12 +36,20 @@ export type NodeStatus =
 
 // In TypeScript language: interface describes the shape of an object
 
+// Current zygote ai just accept the input of the string as the content, here as
+// the further explore of array of the typed blocks of text, images, tool calls. tool results and thinking ,extra.
 export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   timestamp: number;
 }
 
+
+// other useful tool call in the industry: edit (string replacement), Glob(filename patterns),
+// grep (fast content search), bash (run terminal commands), websearch/webfetch,
+// subagents(task/agent) for spawning parallel workers...
+// edit-by-patch, MCP, semantic codebase search via embeddings vs. agentic grep
+// computer use
 export interface ToolCall {
   tool: 'read_file' | 'write_file' | 'list_files' | 'search_files';
   // content optional input to the tool call
@@ -62,6 +73,8 @@ export interface ZygoteNode {
   thinkingContent?: string;
   toolCalls?: ToolCall[];
   error?: string;
+  // snapshot of the workspace Zygote is opened on
+  // path of the file under workspaceroot -> hash of the file content
   workspaceSnapshot?: {
     before?: Record<string, FileHash>;
     after?: Record<string, FileHash>;
@@ -140,9 +153,24 @@ interface VsCodeApi {
   getState(): unknown;
   setState(state: unknown): void;
 }
-
+// "A global function named acquireVsCodeApi will exist at runtime, 
+// returning a VsCodeApi-shaped object. 
+// Don't ask where it comes from — just let me call it."
 declare function acquireVsCodeApi(): VsCodeApi;
 
+
+/**
+ * This pattern is called lazy singleton: 
+ * 'Lazy':
+ * not required until someone actually needs it.
+ * 'Singleton':
+ * there is only ever one.
+ */
+/**
+ * Modern JS/TS Style:
+ * Const by default: for bindings are never reassigned.
+ * let only when reassignment is the point, it would change somewhere.
+ */
 let api: VsCodeApi | null = null;
 
 export function getVsCodeApi(): VsCodeApi {
@@ -163,11 +191,20 @@ export function postMessage(message: WebviewToExtMessage): void {
  * Listen for messages from the extension host.
  */
 export function onMessage(
+  // '=>' describe the shape and the type of the function.
   handler: (message: ExtToWebviewMessage) => void
+  // return type of the onMessage
 ): () => void {
+  // add a wrapper and remember it in a const, because we'll need this exact const listener
   const listener = (event: MessageEvent) => {
     handler(event.data as ExtToWebviewMessage);
   };
   window.addEventListener('message', listener);
   return () => window.removeEventListener('message', listener);
 }
+/**
+ * register once ->
+ * fire N times ->
+ * deregister once ->
+ * window is the browser's built-in global object
+ */
