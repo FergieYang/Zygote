@@ -25,13 +25,15 @@ const NodeDetail: React.FC<NodeDetailProps> = ({
     postMessage({ type: 'rejectPreview', nodeId: node.id });
   };
 
-  const handleDelete = () => {
-    postMessage({ type: 'deleteNode', nodeId: node.id });
-  };
-
   const handleDeleteBranch = () => {
     postMessage({ type: 'deleteBranch', branchId: node.branchId });
   };
+
+  // rejectPreview silently no-ops without a snapshot (e.g. crash-repaired node),
+  // so surface that as a disabled button instead of a dead click
+  const canUndo = !!(
+    node.workspaceSnapshot?.before || node.workspaceSnapshot?.fileHashes
+  );
 
   const branchName = tree.branches[node.branchId]?.name ?? '';
   const isMainBranch = !tree.branches[node.branchId]?.parentBranchId;
@@ -54,16 +56,6 @@ const NodeDetail: React.FC<NodeDetailProps> = ({
         {(node.status === 'error' || node.status === 'previewing') && (
           <button style={styles.primaryBtn} onClick={handleRetry}>
             Retry
-          </button>
-        )}
-        {node.status === 'committed' && (
-          <button style={styles.dangerBtn} onClick={handleUndo}>
-            Undo changes
-          </button>
-        )}
-        {(node.status === 'draft' || node.status === 'error') && (
-          <button style={styles.dangerBtn} onClick={handleDelete}>
-            Delete
           </button>
         )}
         {!isMainBranch && (
@@ -124,6 +116,22 @@ const NodeDetail: React.FC<NodeDetailProps> = ({
           <div style={styles.sectionLabel}>Response</div>
           <MarkdownRenderer content={node.agentResponse} />
         </div>
+      )}
+
+      {/* Undo lives with the result it undoes, not in a danger-button row */}
+      {node.status === 'committed' && !streamingText && (
+        <button
+          style={{ ...styles.undoBtn, ...(canUndo ? {} : styles.undoBtnDisabled) }}
+          disabled={!canUndo}
+          onClick={handleUndo}
+          title={
+            canUndo
+              ? 'Revert files to before this run — node returns to draft'
+              : 'Nothing to roll back'
+          }
+        >
+          ↩ Undo changes
+        </button>
       )}
 
       {/* Chat */}
@@ -205,6 +213,20 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: '3px',
     cursor: 'pointer',
     fontSize: '11px',
+  },
+  undoBtn: {
+    alignSelf: 'flex-start',
+    padding: '3px 10px',
+    backgroundColor: 'transparent',
+    color: '#f14c4c',
+    border: '1px solid #f14c4c',
+    borderRadius: '3px',
+    cursor: 'pointer',
+    fontSize: '11px',
+  },
+  undoBtnDisabled: {
+    opacity: 0.35,
+    cursor: 'default',
   },
   errorBox: {
     padding: '6px 10px',

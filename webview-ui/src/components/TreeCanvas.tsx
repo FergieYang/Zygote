@@ -5,6 +5,10 @@ interface TreeCanvasProps {
   tree: ZygoteTree;
   selectedNodeId: NodeId | null;
   onSelectNode: (nodeId: NodeId) => void;
+  // click on empty canvas clears selection (same as the detail panel's x)
+  onDeselect: () => void;
+  // hover-× on a leaf node box; two-click confirm (webviews block native confirm())
+  onDeleteNode: (nodeId: NodeId) => void;
 }
 
 const NODE_W = 200;
@@ -132,9 +136,14 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
   tree,
   selectedNodeId,
   onSelectNode,
+  onDeselect,
+  onDeleteNode,
 }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [collapsedNodes, setCollapsedNodes] = useState<Set<NodeId>>(new Set());
+  const [hoveredNodeId, setHoveredNodeId] = useState<NodeId | null>(null);
+  // delete badge is "armed" on first click; second click deletes (mouse-leave disarms)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<NodeId | null>(null);
 
   const branchIndex = useMemo(() => {
     const idx = new Map<BranchId, number>();
@@ -249,6 +258,11 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
   return (
     <div ref={scrollRef} style={styles.scroll}>
       <div
+        onClick={(e) => {
+          // Node clicks bubble up here too; only a click directly on the
+          // canvas surface (target === currentTarget) counts as "empty space".
+          if (e.target === e.currentTarget) onDeselect();
+        }}
         style={{
           position: 'relative',
           width: canvasW,
@@ -299,6 +313,11 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
             <div
               key={node.id}
               onClick={() => onSelectNode(node.id)}
+              onMouseEnter={() => setHoveredNodeId(node.id)}
+              onMouseLeave={() => {
+                setHoveredNodeId(null);
+                setConfirmDeleteId(null);
+              }}
               style={{
                 position: 'absolute',
                 left: pos.x,
@@ -326,6 +345,49 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
                 userSelect: 'none',
               }}
             >
+              {/* delete badge: leaf nodes only (deleteNode throws on parents), never mid-run */}
+              {hoveredNodeId === node.id &&
+                !hasChildren &&
+                node.status !== 'previewing' && (
+                  <div
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (confirmDeleteId === node.id) {
+                        setConfirmDeleteId(null);
+                        onDeleteNode(node.id);
+                      } else {
+                        setConfirmDeleteId(node.id);
+                      }
+                    }}
+                    title={
+                      confirmDeleteId === node.id
+                        ? 'Click again to delete — files revert to the parent state'
+                        : 'Delete node'
+                    }
+                    style={{
+                      position: 'absolute',
+                      top: '4px',
+                      right: '4px',
+                      height: '16px',
+                      padding: confirmDeleteId === node.id ? '0 6px' : '0 5px',
+                      borderRadius: '8px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      fontSize: '10px',
+                      cursor: 'pointer',
+                      backgroundColor:
+                        confirmDeleteId === node.id
+                          ? '#f14c4c'
+                          : 'rgba(128,128,128,0.25)',
+                      color:
+                        confirmDeleteId === node.id
+                          ? '#fff'
+                          : 'var(--vscode-foreground, #ccc)',
+                    }}
+                  >
+                    {confirmDeleteId === node.id ? 'delete?' : '×'}
+                  </div>
+                )}
               <div
                 style={{
                   display: 'flex',

@@ -3,7 +3,7 @@
  * webview-ui that talks to VS Code directly. It mirrors the shared data model
  * (tree, nodes, branches) and the two message protocols from src/shared/types.ts,
  * and wraps acquireVsCodeApi() in typed postMessage/onMessage helpers so the rest
- * of the UI never handles raw, untyped messages.
+ * of the UI never handles raw, untyped messages. It serves as the single doorway of all messages.
  */
 
 /**
@@ -20,6 +20,7 @@
 // We duplicate minimally to avoid complex build-time sharing.
 // Typical TypeScript feature, not JavaScript, 
 // completely erased when the code compiles
+// no trace of the types: instructions to the compiler but not to the computer
 export type NodeId = string;
 export type BranchId = string;
 // SHA-256 hash of a file's content, as a 64-character hex string
@@ -87,13 +88,21 @@ export interface ZygoteBranch {
   id: BranchId;
   name: string;
   headNodeId: NodeId | null;
+  // the branch that this node lives on
   parentBranchId?: BranchId;
+  // that forked node itself
   forkedAtNodeId?: NodeId;
   createdAt: number;
 }
 
+
+// workspaceroot is the absolute path of the folder vs code has open
+// the current active node id can be derived from the active branchId
+// The "selected node" is deliverately not tree data because only serve for the viewing function
 export interface ZygoteTree {
   workspaceRoot: string;
+  // []: means an array of that type of the NodeId.
+  // the list of the root nodes
   rootNodeIds: NodeId[];
   nodes: Record<NodeId, ZygoteNode>;
   branches: Record<BranchId, ZygoteBranch>;

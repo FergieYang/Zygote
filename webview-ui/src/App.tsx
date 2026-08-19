@@ -100,6 +100,10 @@ const App: React.FC = () => {
     setSelectedNodeId(null);
   }, []);
 
+  const handleDeleteNode = useCallback((nodeId: NodeId) => {
+    postMessage({ type: 'deleteNode', nodeId });
+  }, []);
+
   const handleSubmitInput = useCallback(() => {
     const trimmed = inputValue.trim();
     if (!trimmed || !tree) return;
@@ -183,6 +187,8 @@ const App: React.FC = () => {
               tree={tree}
               selectedNodeId={selectedNodeId}
               onSelectNode={handleSelectNode}
+              onDeselect={handleCloseDetail}
+              onDeleteNode={handleDeleteNode}
             />
           ) : (
             <div style={styles.loading}>Loading...</div>
